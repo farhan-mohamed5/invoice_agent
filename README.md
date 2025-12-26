@@ -43,8 +43,7 @@ AI-powered invoice/receipt filing system **built for UAE businesses**: automates
 10. [VAT handling](#vat-handling)  
 11. [Analytics dashboard](#analytics-dashboard)  
 12. [Troubleshooting](#troubleshooting)  
-13. [Security & safe sharing](#security--safe-sharing)  
-14. [License](#license)
+
 
 ---
 
