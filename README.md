@@ -1,6 +1,6 @@
 # Invoice AI Agent — Monorepo
 
-AI-powered invoice/receipt filing system built for **UAE business expenses**: ingest invoices (upload, inbox folder, or email), extract key fields using **OCR + a local LLM (Ollama)**, apply vendor/category rules, and resolve uncertain extractions through a fast **AI review workflow** in the web UI.
+AI-powered invoice/receipt filing system **built for UAE businesses**: automates expense capture end-to-end (upload, inbox folder watcher, or **email ingest**), extracts key fields with **OCR + a local LLM (Ollama)**, applies vendor/category rules, and speeds up bookkeeping with a fast **AI review workflow** in the web UI.
 
 > Best on **macOS/Linux** (local Ollama + Python + Node).  
 > **Windows supported** (PowerShell + Python + Node + local Ollama).
@@ -226,7 +226,7 @@ ollama
 
 ### 1) Clone
 ```bash
-git clone <YOUR_REPO_URL>
+git clone <https://github.com/farhan-mohamed5/invoice-ai-agent.git>
 cd invoice_agent
 ```
 
@@ -323,7 +323,7 @@ You will typically use **3 terminals**, and **a 4th** if background processing i
 ### Terminal A — Backend API (FastAPI)
 ```bash
 cd /path/to/invoice_agent
-source .venv/bin/activate  # macOS/Linux
+source .venv/bin/activate  
 export PYTHONPATH="$PWD"
 python -m uvicorn apps.api.main:app --reload --host 127.0.0.1 --port 8000
 ```
@@ -337,7 +337,7 @@ npm run dev
 ### Terminal C — Worker / watcher (folder ingest)
 ```bash
 cd /path/to/invoice_agent
-source .venv/bin/activate  # macOS/Linux
+source .venv/bin/activate  
 python apps/worker/pipeline/watcher_cli.py
 ```
 
