@@ -1,4 +1,4 @@
-# Invoice AI Agent (UAE-focused) — Monorepo
+# Invoice AI Agent — Monorepo
 
 AI-powered invoice/receipt filing system built for **UAE business expenses**: ingest invoices (upload, inbox folder, or email), extract key fields using **OCR + a local LLM (Ollama)**, apply vendor/category rules, and resolve uncertain extractions through a fast **AI review workflow** in the web UI.
 
