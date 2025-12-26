@@ -51,13 +51,17 @@ AI-powered invoice/receipt filing system **built for UAE businesses**: automates
 
 This repository is a **monorepo**:
 
-- **Backend API (FastAPI):** `apps/api/`  
-  Upload endpoints, invoice CRUD, status updates, review resolution, and dashboard data.
-- **Worker pipeline:** `apps/worker/`  
-  Watches an inbox folder, runs OCR/LLM extraction, normalizes vendor/category, stores results, and organizes files.
-- **Frontend (Next.js):** `apps/frontend/`  
-  Dashboard + invoices table + invoice detail + review UI.
-- **Background tasks (Celery + Redis):** used for long-running work (OCR/LLM/processing) without blocking the API.
+- **Backend API (FastAPI + SQLAlchemy):** `apps/api/`  
+  Python REST API that handles uploads, invoice CRUD, review resolution, and dashboard endpoints. Persists data via **SQLAlchemy** to a local **SQLite** DB by default (or your configured database), and exposes clean JSON endpoints for the Next.js frontend.
+
+- **Worker pipeline (Python):** `apps/worker/`  
+  Background processing layer that watches the **Invoices_Inbox** folder, runs **PDF text extraction + OCR (Tesseract)** when needed, calls a **local LLM via Ollama** for structured field extraction, applies vendor/category rules, writes results back to the database, and moves/organizes processed files into the output directory.
+
+- **Frontend (Next.js + React + TypeScript + Tailwind/shadcn):** `apps/frontend/`  
+  Web UI for UAE expense tracking: dashboard, invoices table (search/filter/sort), invoice detail viewer, and the review workflow to fix missing/uncertain fields quickly. Talks to the FastAPI backend via HTTP.
+
+- **Async jobs (Celery + Redis):**  
+  For heavier tasks (OCR, LLM extraction, PDF conversion) so the API stays fast. **Redis** acts as the queue/broker, **Celery** runs workers to execute jobs reliably (retries, non-blocking processing).
 
 ### High-level flow
 
@@ -294,6 +298,16 @@ mkdir -p invoice_agent_data/logs
 ---
 
 ## Configuration
+
+## Git setup
+
+### `.gitignore` (recommended)
+
+Create a `.gitignore` **in the repo root** (same level as `apps/`):
+
+```bash
+cd invoice_agent
+touch .gitignore
 
 ### Frontend: `apps/frontend/.env.local`
 ```env
