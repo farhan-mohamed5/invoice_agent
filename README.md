@@ -169,15 +169,28 @@ Long-running tasks (OCR, LLM extraction, PDF-to-image conversion) can run in the
 - ability to monitor/clear stuck jobs
 
 ---
-
 ## Requirements
 
 ### System
 - **Python 3.11+**
 - **Node.js 18+** (20 recommended)
-- **Ollama installed + running**
-- **Redis** (for Celery broker)
-- **Tesseract OCR** (recommended for image-heavy receipts)
+- **Ollama installed + running** (required for local LLM extraction)
+- **Redis** (required only if you’re running background jobs with Celery)
+- **Tesseract OCR** (required only if you want OCR for scanned images / image-heavy receipts; PDFs with embedded text may work without it)
+
+### Optional but common
+- **Git** (for cloning)
+- **Docker** (easy way to run Redis)
+
+---
+
+## Install dependencies
+
+### Backend (Python)
+If your repo already includes `requirements.txt`:
+
+```bash
+python -m pip install -r requirements.txt
 
 ### Ollama (required)
 
