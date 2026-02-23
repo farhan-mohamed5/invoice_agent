@@ -39,10 +39,9 @@ AI-powered invoice/receipt filing system **built for UAE businesses**: automates
 6. [Configuration](#configuration)  
 7. [Run the services](#run-the-services)  
 8. [Email automation](#email-automation)  
-9. [Database migrations (Alembic)](#database-migrations-alembic)  
-10. [VAT handling](#vat-handling)  
-11. [Analytics dashboard](#analytics-dashboard)  
-12. [Troubleshooting](#troubleshooting)  
+9. [VAT handling](#vat-handling)  
+10. [Analytics dashboard](#analytics-dashboard)  
+11. [Troubleshooting](#troubleshooting)  
 
 
 ---
@@ -59,9 +58,6 @@ This repository is a **monorepo**:
 
 - **Frontend (Next.js + React + TypeScript + Tailwind/shadcn):** `apps/frontend/`  
   Web UI for UAE expense tracking: dashboard, invoices table (search/filter/sort), invoice detail viewer, and the review workflow to fix missing/uncertain fields quickly. Talks to the FastAPI backend via HTTP.
-
-- **Async jobs (Celery + Redis):**  
-  For heavier tasks (OCR, LLM extraction, PDF conversion) so the API stays fast. **Redis** acts as the queue/broker, **Celery** runs workers to execute jobs reliably (retries, non-blocking processing).
 
 ### High-level flow
 
@@ -81,12 +77,12 @@ This repository is a **monorepo**:
 invoice_agent/
 ├─ apps/
 │  ├─ api/                      # FastAPI backend
-│  ├─ worker/                   # watcher + pipeline + background jobs
+│  ├─ worker/                   # watcher + pipeline
 │  └─ frontend/                 # Next.js UI
 ├─ invoice_agent_data/          # local data 
 │  ├─ Invoices_Inbox/           # drop PDFs/images/email-body txt here
 │  ├─ Invoices/                 # organized processed files
-│  ├─ logs/                     # worker/email/celery logs
+│  ├─ logs/                     # worker/email logs
 │  └─ invoices.db               # local DB 
 ├─ docs/
 │  └─ screenshots/
@@ -106,7 +102,7 @@ Recommended local layout:
 - `invoice_agent_data/invoices.db`  
   Local database file (if using SQLite).
 - `invoice_agent_data/logs/`  
-  Logs for watcher/email/celery.
+  Logs for watcher/email.
 
 ---
 
@@ -177,26 +173,17 @@ The frontend is designed around a practical **Invoices page** so you can manage 
 - Submit fixes → fields update in the DB and status moves to `ok`.
 
 ---
-
-### 6) Background processing (Celery + Redis)
-Long-running tasks (OCR, LLM extraction, PDF-to-image conversion) can run in the background:
-- API stays responsive
-- retries for transient failures
-- ability to monitor/clear stuck jobs
-
----
 ## Requirements
 
 ### System
 - **Python 3.11+**
 - **Node.js 18+** (20 recommended)
 - **Ollama installed + running** (required for local LLM extraction)
-- **Redis** (required only if you’re running background jobs with Celery)
 - **Tesseract OCR** (required only if you want OCR for scanned images / image-heavy receipts; PDFs with embedded text may work without it)
 
 ### Optional but common
 - **Git** (for cloning)
-- **Docker** (easy way to run Redis)
+- **Docker**
 
 ---
 
@@ -207,6 +194,7 @@ If your repo already includes `requirements.txt`:
 
 ```bash
 python -m pip install -r requirements.txt
+```
 
 ### Ollama (required)
 
@@ -240,9 +228,6 @@ pdfplumber
 pillow
 pytesseract
 pdf2image
-
-celery
-redis
 
 # If your code calls Ollama via a Python client (optional; install only if used)
 ollama
@@ -285,8 +270,7 @@ If you don’t yet, install the baseline set (then freeze later):
 ```bash
 python -m pip install fastapi "uvicorn[standard]" python-dotenv python-multipart \
   sqlalchemy alembic requests httpx \
-  pdfplumber pillow pytesseract pdf2image \
-  celery redis
+  pdfplumber pillow pytesseract pdf2image
 ```
 
 Optional (if your code imports a Python Ollama client):
@@ -320,6 +304,7 @@ Create a `.gitignore` **in the repo root** (same level as `apps/`):
 ```bash
 cd invoice_agent
 touch .gitignore
+```
 
 ### Frontend: `apps/frontend/.env.local`
 ```env
@@ -339,10 +324,6 @@ INVOICE_AGENT_INBOX=./invoice_agent_data/Invoices_Inbox
 INVOICE_AGENT_OUTPUT=./invoice_agent_data/Invoices
 INVOICE_AGENT_DB_PATH=./invoice_agent_data/invoices.db
 
-# Celery / Redis (broker)
-CELERY_BROKER_URL=redis://localhost:6379/0
-CELERY_RESULT_BACKEND=redis://localhost:6379/0
-
 # Email ingest (IMAP) — only if using email ingest
 RECEIPT_AGENT_IMAP_HOST=imap.gmail.com
 RECEIPT_AGENT_IMAP_USER=your_email@gmail.com
@@ -356,7 +337,7 @@ RECEIPT_AGENT_IMAP_FOLDER=INBOX
 
 ## Run the services
 
-You will typically use **3 terminals**, and **a 4th** if background processing is enabled.
+You will typically use **3 terminals**.
 
 ### Terminal A — Backend API (FastAPI)
 ```bash
@@ -377,42 +358,6 @@ npm run dev
 cd /path/to/invoice_agent
 source .venv/bin/activate  
 python apps/worker/pipeline/watcher_cli.py
-```
-
-### Terminal D — Background worker (Celery)
-1) Start Redis (choose one option):
-
-**Option A: Docker**
-```bash
-docker run --name invoice-agent-redis -p 6379:6379 -d redis:7
-```
-
-**Option B: macOS (Homebrew)**
-```bash
-brew install redis
-brew services start redis
-```
-
-2) Start Celery worker
-
-Because repos differ on where the Celery app is defined, first locate it:
-```bash
-python -c "import glob; print('\n'.join([p for p in glob.glob('**/*.py', recursive=True) if 'celery' in p.lower()]))"
-```
-
-Then search for the Celery app definition:
-```bash
-grep -R "Celery(" -n apps | head -n 20
-```
-
-Once you identify the module that exposes `celery_app` (example path shown below), run:
-```bash
-celery -A apps.worker.pipeline.celery_app:celery_app worker -l info
-```
-
-If your app uses a different name (e.g., `app`), adjust accordingly:
-```bash
-celery -A <your.module.path>:<your_celery_instance> worker -l info
 ```
 
 Open:
@@ -439,38 +384,6 @@ crontab -e
 Add:
 ```cron
 */5 * * * * cd /path/to/invoice_agent && . .venv/bin/activate && python apps/worker/pipeline/email_ingest_imap.py >> invoice_agent_data/logs/imap.log 2>&1
-```
-
----
-
-## Database migrations (Alembic)
-
-If you’re using SQLAlchemy models, Alembic keeps schema changes clean and repeatable.
-
-### One-time setup
-From repo root:
-```bash
-source .venv/bin/activate
-alembic init alembic
-```
-
-Then:
-- set your DB URL in `alembic.ini` (or wire it via env var)
-- point Alembic `env.py` to your SQLAlchemy `Base.metadata`
-
-### Create a migration
-```bash
-alembic revision --autogenerate -m "create invoices table"
-```
-
-### Apply migrations
-```bash
-alembic upgrade head
-```
-
-### Downgrade (if needed)
-```bash
-alembic downgrade -1
 ```
 
 ---
@@ -527,30 +440,3 @@ Install the missing module:
 python -m pip install <package>
 ```
 
-### Celery / Redis issues
-
-**Redis connection refused**
-- Check Redis is running:
-```bash
-redis-cli ping
-```
-Expected: `PONG`
-
-**Celery worker can’t connect to broker**
-- Confirm `CELERY_BROKER_URL` matches your Redis URL:
-```bash
-echo $CELERY_BROKER_URL
-```
-
-**Tasks stuck / piling up**
-- Restart Redis + Celery worker
-- Purge queue (careful: deletes queued jobs):
-```bash
-celery -A <your.module.path>:<your_celery_instance> purge -f
-```
-
-**Worker not executing tasks**
-- Ensure your API is actually enqueuing to Celery (not running tasks inline)
-- Check worker logs in terminal (or redirect to `invoice_agent_data/logs/celery.log`)
-
----
